@@ -64,3 +64,10 @@ if __name__ == "__main__":
 
     for key, value in stats.items():
         print(key, round(float(value), 2))
+
+    results, logs = runExperiments(100)
+
+    print("Середні показники за 100 прогонів")
+    print(results.describe().loc[["mean", "std", "min", "max"]].T.round(3).to_string())
+    print("Середні значення за годинами доби")
+    print(logs.groupby("hour")[["arrived", "lost", "served", "queue"]].mean().round(3).to_string())
