@@ -1,6 +1,5 @@
 ﻿from config import DAYS, MASTERS
 
-
 class Order:
     def __init__(self, category, cost, repairTime, arrivalTime):
         self.category = category
@@ -8,7 +7,6 @@ class Order:
         self.repairTime = repairTime
         self.arrivalTime = arrivalTime
         self.remaining = repairTime
-
 
 class ServiceCenter:
     def __init__(self, queueLimit, wage):
@@ -25,6 +23,7 @@ class ServiceCenter:
     def freeMasters(self):
         if self.current is None:
             return 1
+
         return 0
 
     def loseClient(self, order):
@@ -36,11 +35,14 @@ class ServiceCenter:
             if self.current is None:
                 if len(self.queue) == 0:
                     break
+
                 self.current = self.queue.pop(0)
+
             work = min(hours, self.current.remaining)
             self.current.remaining -= work
             self.busyTime += work
             hours -= work
+
             if self.current.remaining <= 0:
                 self.served += 1
                 self.revenue += self.current.cost
@@ -49,8 +51,10 @@ class ServiceCenter:
     def getStatistics(self):
         wages = self.wage * DAYS * MASTERS
         unfinished = len(self.queue)
+
         if self.current is not None:
             unfinished += 1
+
         return {
             "served": self.served,
             "lost": self.lost,
