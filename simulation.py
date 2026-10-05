@@ -31,9 +31,14 @@ def runModel(periods=PERIODS, categories=CATEGORIES, queueLimit=QUEUE_LIMIT, wag
 
         servedBefore = center.served
         center.repair(STEP)
-        log.append([day, hour, arrived, lost, center.served - servedBefore, len(center.queue)])
+        work_time = sum(order.repairTime for order in center.queue)
+        if center.current_order is not None:
+            work_time += center.current_order.repairTime
+            
+        log.append([day, hour, arrived, lost, center.served - servedBefore, len(center.queue), work_time])
 
-    log = pd.DataFrame(log, columns=["day", "hour", "arrived", "lost", "served", "queue"])
+    # Оновлюємо колонки DataFrame, додаючи "queue_time"
+    log = pd.DataFrame(log, columns=["day", "hour", "arrived", "lost", "served", "queue", "queue_time"])
     stats = {"clients": log.arrived.sum()}
     stats.update(center.getStatistics())
     stats["avgQueue"] = log.queue.mean()
