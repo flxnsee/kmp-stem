@@ -1,10 +1,15 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from simulation import runModel, runExperiments
+import pandas as pd
+
+N = 100
+SEED = 2 # None
+
+results, logs = runExperiments(N)
+_, single_log = runModel(seed = SEED)
 
 def plot_hypothesis_proofs():
-    results, logs = runExperiments(100)
-    
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
 
     hourly_lost = logs.groupby('hour')['lost'].mean()
@@ -19,8 +24,6 @@ def plot_hypothesis_proofs():
     ax1.set_xticks(range(9, 18))
     ax1.set_xticklabels([f"{h}:00-{h+1}:00" for h in range(9, 18)], rotation=45, ha='right')
     ax1.grid(axis='y', linestyle='--', alpha=0.7)
-
-    _, single_log = runModel(seed=42)
     
     avg_ticket = 1600 
     
@@ -49,33 +52,7 @@ def plot_hypothesis_proofs():
     plt.tight_layout()
     plt.show()
 
-def plot_scatter_profit():
-    results, _ = runExperiments(100)
-    
-    # Створюємо окреме вікно
-    plt.figure(figsize=(10, 6))
-    
-    plt.scatter(results['lost'], results['profit'], color='#9467bd', alpha=0.7, edgecolors='black')
-    
-    z = np.polyfit(results['lost'], results['profit'], 1)
-    p = np.poly1d(z)
-    plt.plot(results['lost'], p(results['lost']), "r--", linewidth=2, label='Лінія тренду')
-    
-    plt.title('Залежність прибутку від втрат клієнтів (за 100 тижнів)')
-    plt.xlabel('Кількість втрачених клієнтів (за тиждень)')
-    plt.ylabel('Чистий прибуток (грн)')
-    plt.legend()
-    plt.grid(True, linestyle=':', alpha=0.6)
-    
-    plt.tight_layout()
-    plt.show()
-
-import matplotlib.pyplot as plt
-from simulation import runModel
-
 def plot_combined_timeline():
-    _, single_log = runModel(seed=42)
-
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10), sharex=True)
     hours_timeline = range(1, 46)
     
@@ -119,11 +96,58 @@ def plot_combined_timeline():
     plt.tight_layout()
     plt.show()
 
-if __name__ == "__main__":
-    print("Будуємо графік залежності прибутку...")
-    plot_scatter_profit()
 
+
+######## Етап 2 ########
+
+def plot_queue_dynamics(queue_df):
+    """Графік динаміки черги для c=1, 2, 3"""
+    plt.figure(figsize=(12, 6))
+    plt.plot(queue_df['hour'], queue_df['c=1'], label='1 майстер', marker='o')
+    plt.plot(queue_df['hour'], queue_df['c=2'], label='2 майстри', marker='s')
+    plt.plot(queue_df['hour'], queue_df['c=3'], label='3 майстри', marker='^')
+    
+    plt.axhline(y=6, color='red', linestyle='--', label='Ліміт черги (m=6)')
+    plt.title('Динаміка розміру черги протягом одного тижня')
+    plt.xlabel('Модельний час (години)')
+    plt.ylabel('Кількість техніки в черзі')
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig('queue_dynamics.png')
+    plt.show()
+
+
+def plot_lost_hourly(lost_hourly_df):
+    """Графік 'Вузьке місце'"""
+    plt.figure(figsize=(10, 6))
+    
+    x = np.arange(len(lost_hourly_df['hour']))
+    width = 0.35
+    
+    plt.bar(x - width/2, lost_hourly_df['c=1'], width, label='1 майстер', color='salmon')
+    plt.bar(x + width/2, lost_hourly_df['c=2'], width, label='2 майстри', color='skyblue')
+    
+    plt.title('Вузьке місце: У які години клієнти йдуть до конкурентів?')
+    plt.xlabel('Година доби')
+    plt.ylabel('Середня кількість відмов')
+    plt.xticks(x, [f"{h}:00-{h+1}:00" for h in lost_hourly_df['hour']], rotation=45)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig('lost_hourly.png')
+    plt.show()
+
+
+
+
+if __name__ == "__main__":
+    # summary_df = pd.read_csv('monte_carlo_results.csv').groupby('masters').mean().reset_index()
+    summary_df, queue_df, lost_hourly_df = generate_fake_data()
+    
+    plot_queue_dynamics(queue_df)
+    plot_lost_hourly(lost_hourly_df)
+""" Етап 1
+if __name__ == "__main__":
     plot_combined_timeline()
 
-    plot_hypothesis_proofs()
-    
+    plot_hypothesis_proofs()"""
