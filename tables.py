@@ -29,7 +29,7 @@ def print_pretty_tables():
     try:
         df_matrix = pd.read_csv('experiments_matrix.csv')
         
-        base_queue = df_matrix[df_matrix['queueLimit'] == 6]
+        base_queue = df_matrix[df_matrix['queueLimit'] == 6].groupby(['lambda_multiplier', 'masters']).mean().reset_index()
         
         idx_max = base_queue.groupby('lambda_multiplier')['profit'].idxmax()
         optimal_table = base_queue.loc[idx_max, ['lambda_multiplier', 'masters', 'served', 'lost', 'profit', 'utilization']]
@@ -37,6 +37,7 @@ def print_pretty_tables():
         optimal_table.columns = ['Множник потоку (x)', 'Оптимум майстрів (c)', 'Обслуговано', 'Втрачено', 'Макс. прибуток (грн)', 'Завантаж.']
         print("Оптимальна кількість майстрів залежно від інтенсивності вхідного потоку (при m=6):")
         print(optimal_table.to_string(index=False))
+        
         
     except FileNotFoundError:
         print("Файл experiments_matrix.csv не знайдено. Спочатку запустіть simulation.py")

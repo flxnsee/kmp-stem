@@ -130,8 +130,8 @@ def plot_lost_hourly(lost_hourly_df):
     
     plt.bar(x - width*1.5, lost_hourly_df['c=1'], width, label='1 майстер', color='salmon')
     plt.bar(x - width*0.5, lost_hourly_df['c=2'], width, label='2 майстри', color='skyblue')
-    plt.bar(x + width*0.5, lost_hourly_df['c=3'], width, label='3 майстри', color='mediumseagreen')
-    plt.bar(x + width*1.5, lost_hourly_df['c=4'], width, label='4 майстри', color='mediumpurple')
+    plt.bar(x + width*0.5, lost_hourly_df['c=3'], width, label='3 майстри', color='green')
+    plt.bar(x + width*1.5, lost_hourly_df['c=4'], width, label='4 майстри', color='purple')
     
     plt.title('Вузьке місце: У які години клієнти йдуть до конкурентів?')
     plt.xlabel('Година доби')
@@ -147,17 +147,19 @@ def plot_financials(summary_df):
     
     color = 'tab:green'
     ax1.set_xlabel('Кількість майстрів (c)')
-    ax1.set_ylabel('Прибуток (грн)', color=color)
+    ax1.set_ylabel('Фінансові показники (грн)', color=color)
     line1 = ax1.plot(summary_df['masters'], summary_df['profit'], color=color, marker='o', linewidth=2, label='Прибуток')
-    ax1.tick_params(axis='y')
+    line_rev = ax1.plot(summary_df['masters'], summary_df['revenue'], color='tab:blue', marker='s', label='Виручка (D)')
+    ax1.tick_params(axis='y', labelcolor=color)
     
     ax2 = ax1.twinx()
     color = 'tab:red'
-    ax2.set_ylabel('Витрати на зарплату (грн)', color=color)
-    line2 = ax2.plot(summary_df['masters'], summary_df['wages'], color=color, marker='x', linestyle='--', label='Зарплата')
-    ax2.tick_params(axis='y')
+    ax2.set_ylabel('Витрати та збитки (грн)', color=color)
+    line2 = ax2.plot(summary_df['masters'], summary_df['wages'], color=color, marker='x', linestyle='--', label='Витрати на зарплату')
+    line_lost = ax2.plot(summary_df['masters'], summary_df['lostProfit'], color='orange', marker='^', linestyle='-.', label='Недоотриманий прибуток (U)')
+    ax2.tick_params(axis='y', labelcolor=color)
     
-    lines = line1 + line2
+    lines = line1 + line_rev + line2 + line_lost
     labels = [l.get_label() for l in lines]
     ax1.legend(lines, labels, loc='upper left')
     
