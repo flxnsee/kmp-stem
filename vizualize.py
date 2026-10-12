@@ -96,16 +96,21 @@ def plot_combined_timeline():
     plt.tight_layout()
     plt.show()
 
+""" Етап 1
+if __name__ == "__main__":
+    plot_combined_timeline()
 
+    plot_hypothesis_proofs()"""
 
 ######## Етап 2 ########
 
 def plot_queue_dynamics(queue_df):
-    """Графік динаміки черги для c=1, 2, 3"""
     plt.figure(figsize=(12, 6))
-    plt.plot(queue_df['hour'], queue_df['c=1'], label='1 майстер', marker='o')
-    plt.plot(queue_df['hour'], queue_df['c=2'], label='2 майстри', marker='s')
-    plt.plot(queue_df['hour'], queue_df['c=3'], label='3 майстри', marker='^')
+    
+    plt.plot(queue_df['hour'], queue_df['c=1'], label='1 майстер', marker='o', color='salmon')
+    plt.plot(queue_df['hour'], queue_df['c=2'], label='2 майстри', marker='s', color='skyblue')
+    plt.plot(queue_df['hour'], queue_df['c=3'], label='3 майстри', marker='^', color='green')
+    plt.plot(queue_df['hour'], queue_df['c=4'], label='4 майстри', marker='d', color='purple')
     
     plt.axhline(y=6, color='red', linestyle='--', label='Ліміт черги (m=6)')
     plt.title('Динаміка розміру черги протягом одного тижня')
@@ -117,16 +122,16 @@ def plot_queue_dynamics(queue_df):
     plt.savefig('queue_dynamics.png')
     plt.show()
 
-
 def plot_lost_hourly(lost_hourly_df):
-    """Графік 'Вузьке місце'"""
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(12, 6))
     
     x = np.arange(len(lost_hourly_df['hour']))
-    width = 0.35
+    width = 0.2 
     
-    plt.bar(x - width/2, lost_hourly_df['c=1'], width, label='1 майстер', color='salmon')
-    plt.bar(x + width/2, lost_hourly_df['c=2'], width, label='2 майстри', color='skyblue')
+    plt.bar(x - width*1.5, lost_hourly_df['c=1'], width, label='1 майстер', color='salmon')
+    plt.bar(x - width*0.5, lost_hourly_df['c=2'], width, label='2 майстри', color='skyblue')
+    plt.bar(x + width*0.5, lost_hourly_df['c=3'], width, label='3 майстри', color='mediumseagreen')
+    plt.bar(x + width*1.5, lost_hourly_df['c=4'], width, label='4 майстри', color='mediumpurple')
     
     plt.title('Вузьке місце: У які години клієнти йдуть до конкурентів?')
     plt.xlabel('Година доби')
@@ -137,17 +142,78 @@ def plot_lost_hourly(lost_hourly_df):
     plt.savefig('lost_hourly.png')
     plt.show()
 
-
-
-
-if __name__ == "__main__":
-    # summary_df = pd.read_csv('monte_carlo_results.csv').groupby('masters').mean().reset_index()
-    summary_df, queue_df, lost_hourly_df = generate_fake_data()
+def plot_financials(summary_df):
+    fig, ax1 = plt.subplots(figsize=(10, 6))
     
-    plot_queue_dynamics(queue_df)
-    plot_lost_hourly(lost_hourly_df)
-""" Етап 1
-if __name__ == "__main__":
-    plot_combined_timeline()
+    color = 'tab:green'
+    ax1.set_xlabel('Кількість майстрів (c)')
+    ax1.set_ylabel('Прибуток (грн)', color=color)
+    line1 = ax1.plot(summary_df['masters'], summary_df['profit'], color=color, marker='o', linewidth=2, label='Прибуток')
+    ax1.tick_params(axis='y')
+    
+    ax2 = ax1.twinx()
+    color = 'tab:red'
+    ax2.set_ylabel('Витрати на зарплату (грн)', color=color)
+    line2 = ax2.plot(summary_df['masters'], summary_df['wages'], color=color, marker='x', linestyle='--', label='Зарплата')
+    ax2.tick_params(axis='y')
+    
+    lines = line1 + line2
+    labels = [l.get_label() for l in lines]
+    ax1.legend(lines, labels, loc='upper left')
+    
+    plt.title('Залежність фінансових показників від розміру штату')
+    plt.xticks(summary_df['masters'])
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig('financials_vs_c.png')
+    plt.show()
 
-    plot_hypothesis_proofs()"""
+def plot_utilization(summary_df):
+    plt.figure(figsize=(8, 5))
+    plt.plot(summary_df['masters'], summary_df['utilization'], marker='D', color='purple', linewidth=2)
+    plt.axhline(y=0.75, color='orange', linestyle='--', label='Оптимальна завантаженість (75%)')
+    
+    plt.title('Завантаженість майстрів залежно від їх кількості')
+    plt.xlabel('Кількість майстрів (c)')
+    plt.ylabel('Коефіцієнт завантаженості (0-1)')
+    plt.xticks(summary_df['masters'])
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig('utilization.png')
+    plt.show()
+
+if __name__ == "__main__":
+
+    raw_df = pd.read_csv('monte_carlo_results.csv')
+    summary_df = raw_df.groupby('masters').mean().reset_index()
+    summary_df['profit'] = summary_df['revenue'] - summary_df['wages']
+        
+    plot_financials(summary_df)
+    plot_utilization(summary_df)
+
+    logs_df = pd.read_csv('monte_carlo_logs.csv')
+
+    logs_df['step'] = (logs_df['day'] - 1) * 9 + (logs_df['hour'] - 9) + 1
+        
+    queue_avg = logs_df.groupby(['masters', 'step'])['queue'].mean().reset_index()
+        
+    queue_df = pd.DataFrame({'hour': range(1, 46)})
+    for c in [1, 2, 3, 4]:
+        c_data = queue_avg[queue_avg['masters'] == c]
+        queue_df[f'c={c}'] = c_data['queue'].values if not c_data.empty else np.zeros(45)
+
+    plot_queue_dynamics(queue_df)
+        
+        
+    lost_avg = logs_df.groupby(['masters', 'hour'])['lost'].mean().reset_index()
+        
+    hours_list = sorted(logs_df['hour'].unique())
+    lost_hourly_df = pd.DataFrame({'hour': hours_list})
+    for c in [1, 2, 3, 4]: 
+        c_data = lost_avg[lost_avg['masters'] == c]
+        lost_hourly_df[f'c={c}'] = c_data['lost'].values if not c_data.empty else np.zeros(len(hours_list))
+                    
+    plot_lost_hourly(lost_hourly_df)
+
+

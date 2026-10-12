@@ -42,68 +42,6 @@ def runModel(periods=PERIODS, categories=CATEGORIES, queueLimit=QUEUE_LIMIT, wag
     stats["avgQueue"] = log.queue.mean()
     return stats, log
 
-def runExperiments(n=100, **params):
-    results = []
-    logs = []
-
-    for i in range(n):
-        stats, log = runModel(seed=i, **params)
-        log["run"] = i
-        results.append(stats)
-        logs.append(log)
-
-    results = pd.DataFrame(results)
-    results["lossRate"] = results.lost / results.clients
-    results["utilization"] = results.busyTime / (STEPS * MASTERS)
-    return results, pd.concat(logs, ignore_index=True)
-
-
-####### Етап 2 #######
-
-def run_all_masters(max_masters=6, n=100, **params):
-    all_data = pd.DataFrame()
-    
-    for c in range(1, max_masters + 1):
-        results = runExperiments(n=n, masters=c, **params)
-        
-        results['masters'] = c
-        
-        results['utilization'] = results['busyTime'] / (STEPS * c)
-        
-        all_data = pd.concat([all_data, results], ignore_index=True)
-        
-    all_data.to_csv('monte_carlo_results.csv', index=False)
-    
-    summary = all_data.groupby('masters').mean().reset_index()
-    
-    return all_data, summary
-
-def run_experiments_matrix():
-    flow_multipliers = [0.5, 1.0, 1.5, 2.0]
-    queue_capacities = [3, 6, 10]
-    
-    all_experiments_data = pd.DataFrame()
-    
-    for m in queue_capacities:
-        for multiplier in flow_multipliers:
-            print(f"Запуск: черга m={m}, потік x{multiplier}")
-            
-            for c in range(1, 7):
-                results = runExperiments(n=100, masters=c, queueLimit=m, lambda_multiplier=multiplier)
-                
-                results['masters'] = c
-                results['queueLimit'] = m
-                results['lambda_multiplier'] = multiplier
-                
-                results['utilization'] = results['busyTime'] / (STEPS * c)
-                
-                all_experiments_data = pd.concat([all_experiments_data, results], ignore_index=True)
-                
-    all_experiments_data.to_csv('experiments_matrix.csv', index=False)
-    
-    summary = all_experiments_data.groupby(['queueLimit', 'lambda_multiplier', 'masters']).mean().reset_index()
-    return summary
-
 """if __name__ == "__main__":
     pd.set_option("display.width", 200)
     stats, log = runModel(seed=0)
@@ -121,3 +59,81 @@ def run_experiments_matrix():
     print(results.describe().loc[["mean", "std", "min", "max"]].T.round(3).to_string())
     print("Середні значення за годинами доби")
     print(logs.groupby("hour")[["arrived", "lost", "served", "queue"]].mean().round(3).to_string())"""
+
+####### Етап 2 #######
+
+def runExperiments(n=100, **params):
+    results = []
+    logs = []
+    
+    masters = params.get('masters', 1)
+
+    for i in range(n):
+        stats, log = runModel(seed=i, **params)
+        log["run"] = i
+        results.append(stats)
+        logs.append(log)
+
+    results = pd.DataFrame(results)
+    results["lossRate"] = results.lost / results.clients
+    
+    results['utilization'] = results['busyTime'] / (STEPS * masters)
+    
+    return results, pd.concat(logs, ignore_index=True)
+
+def run_all_masters(max_masters=6, n=100, **params):
+    all_data = pd.DataFrame()
+    all_logs = pd.DataFrame() 
+    
+    for c in range(1, max_masters + 1):
+        results, logs = runExperiments(n=n, masters=c, **params)
+        
+        results['masters'] = c
+        logs['masters'] = c 
+        
+        all_data = pd.concat([all_data, results], ignore_index=True)
+        all_logs = pd.concat([all_logs, logs], ignore_index=True) 
+        
+    all_data.to_csv('monte_carlo_results.csv', index=False)
+    all_logs.to_csv('monte_carlo_logs.csv', index=False)
+    
+    summary = all_data.groupby('masters').mean().reset_index()
+    return all_data, summary
+
+def run_experiments_matrix():
+    flow_multipliers = [0.5, 1.0, 1.5, 2.0]
+    queue_capacities = [3, 6, 10]
+    all_experiments_data = pd.DataFrame()
+    
+    for m in queue_capacities:
+        for multiplier in flow_multipliers:
+            print(f"Запуск: черга m={m}, потік x{multiplier}")
+            
+            current_periods = [(start, end, lam * multiplier) for start, end, lam in PERIODS]
+            
+            for c in range(1, 7):
+                results, logs = runExperiments(n=100, masters=c, queueLimit=m, periods=current_periods)
+                
+                results['masters'] = c
+                results['queueLimit'] = m
+                results['lambda_multiplier'] = multiplier
+                
+                all_experiments_data = pd.concat([all_experiments_data, results], ignore_index=True)
+                
+    all_experiments_data.to_csv('experiments_matrix.csv', index=False)
+    summary = all_experiments_data.groupby(['queueLimit', 'lambda_multiplier', 'masters']).mean().reset_index()
+    return summary
+
+
+if __name__ == "__main__":
+    print("Запуск прогонів для c = 1...6...")
+    
+    all_data, summary_data = run_all_masters(max_masters=6)
+    
+    print("\nСередні показники для кожної кількості майстрів:")
+    print(summary_data[['masters', 'lost', 'profit', 'utilization']])
+    
+    print("\nЗапуск матриці експериментів (потік + черга)...")
+    matrix_summary = run_experiments_matrix()
+    
+    print("\nЕксперименти завершено! Дані збережено у CSV-файли.")
