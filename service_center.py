@@ -1,4 +1,3 @@
-# service_center.py
 from config import HOURS_PER_DAY
 
 class Order:
@@ -9,56 +8,63 @@ class Order:
         self.arrivalTime = arrivalTime
 
 class ServiceCenter:
-    def __init__(self, queueLimit, wage):
+    def __init__(self, queueLimit, wage, masters=1):
         self.queueLimit = queueLimit
         self.wage = wage
         self.queue = []
-        
+        self.masters = [None] * masters
+
         self.served = 0
         self.lost = 0
         self.lostProfit = 0.0
         self.revenue = 0.0
         self.busyTime = 0.0
         self.wages = 0.0
-        self.current_order = None
 
     def freeMasters(self):
-        return 1 if self.current_order is None else 0
+        return self.masters.count(None)
 
     def loseClient(self, order):
         self.lost += 1
         self.lostProfit += order.cost
 
+    def work(self, i, start, step):
+        order = self.masters[i]
+        worked = min(step - start, order.repairTime)
+        order.repairTime -= worked
+        self.busyTime += worked
+
+        if order.repairTime > 0:
+            return step
+
+        self.served += 1
+        self.revenue += order.cost
+        self.masters[i] = None
+
+        return start + worked
+
     def repair(self, step):
-        self.wages += self.wage / HOURS_PER_DAY
-        
-        remaining_time = step
-        
-        while remaining_time > 0:
-            # Якщо майстер вільний і є черга — беремо перший пристрій
-            if self.current_order is None and len(self.queue) > 0:
-                self.current_order = self.queue.pop(0)
-                
-            # Якщо майстер має пристрій для ремонту
-            if self.current_order is not None:
-                worked = min(remaining_time, self.current_order.repairTime)
-                self.busyTime += worked
-                self.current_order.repairTime -= worked
-                remaining_time -= worked # Віднімаємо витрачений час від нашої 1 години
-                
-                # Якщо ремонт завершено
-                if self.current_order.repairTime <= 0:
-                    self.served += 1
-                    self.revenue += self.current_order.cost
-                    self.current_order = None
-            else:
+        self.wages += self.wage * len(self.masters) / HOURS_PER_DAY
+        freeAt = [0.0] * len(self.masters)
+
+        for i in range(len(self.masters)):
+            if self.masters[i] is not None:
+                freeAt[i] = self.work(i, 0, step)
+
+        while self.queue:
+            i = freeAt.index(min(freeAt))
+
+            if freeAt[i] >= step:
                 break
+
+            self.masters[i] = self.queue.pop(0)
+            freeAt[i] = self.work(i, freeAt[i], step)
 
     def getStatistics(self):
         return {
             "served": self.served,
             "lost": self.lost,
-            "unfinished": len(self.queue) + (1 if self.current_order is not None else 0),
+            "unfinished": len(self.queue) + len(self.masters) - self.freeMasters(),
             "revenue": self.revenue,
             "lostProfit": self.lostProfit,
             "busyTime": self.busyTime,

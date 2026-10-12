@@ -12,11 +12,11 @@ def clientArrived(center, order):
     center.loseClient(order)
     return False
 
-def runModel(periods=PERIODS, categories=CATEGORIES, queueLimit=QUEUE_LIMIT, wage=WAGE, seed=None):
+def runModel(periods=PERIODS, categories=CATEGORIES, queueLimit=QUEUE_LIMIT, wage=WAGE, masters=MASTERS, seed=None):
     if seed is not None:
         np.random.seed(seed)
 
-    center = ServiceCenter(queueLimit, wage)
+    center = ServiceCenter(queueLimit, wage, masters)
     log = []
 
     for step in range(STEPS):
@@ -32,8 +32,7 @@ def runModel(periods=PERIODS, categories=CATEGORIES, queueLimit=QUEUE_LIMIT, wag
         servedBefore = center.served
         center.repair(STEP)
         work_time = sum(order.repairTime for order in center.queue)
-        if center.current_order is not None:
-            work_time += center.current_order.repairTime
+        work_time += sum(order.repairTime for order in center.masters if order is not None)
             
         log.append([day, hour, arrived, lost, center.served - servedBefore, len(center.queue), work_time])
 
