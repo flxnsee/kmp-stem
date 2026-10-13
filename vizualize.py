@@ -143,37 +143,51 @@ def plot_lost_hourly(lost_hourly_df):
     plt.show()
 
 def plot_financials(summary_df):
-    fig, ax1 = plt.subplots(figsize=(10, 6))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+
+    color_rev = 'tab:blue'
+    color_prof = 'tab:green'
     
-    color = 'tab:green'
     ax1.set_xlabel('Кількість майстрів (c)')
-    ax1.set_ylabel('Фінансові показники (грн)', color=color)
-    line1 = ax1.plot(summary_df['masters'], summary_df['profit'], color=color, marker='o', linewidth=2, label='Прибуток')
-    line_rev = ax1.plot(summary_df['masters'], summary_df['revenue'], color='tab:blue', marker='s', label='Виручка (D)')
-    ax1.tick_params(axis='y', labelcolor=color)
+    ax1.set_ylabel('Сума (грн)')
     
-    ax2 = ax1.twinx()
-    color = 'tab:red'
-    ax2.set_ylabel('Витрати та збитки (грн)', color=color)
-    line2 = ax2.plot(summary_df['masters'], summary_df['wages'], color=color, marker='x', linestyle='--', label='Витрати на зарплату')
-    line_lost = ax2.plot(summary_df['masters'], summary_df['lostProfit'], color='orange', marker='^', linestyle='-.', label='Недоотриманий прибуток (U)')
-    ax2.tick_params(axis='y', labelcolor=color)
+    line_rev = ax1.plot(summary_df['masters'], summary_df['revenue'], color=color_rev, marker='s', linewidth=2, label='Виручка (D)')
+    line_prof = ax1.plot(summary_df['masters'], summary_df['profit'], color=color_prof, marker='o', linewidth=2, label='Прибуток')
     
-    lines = line1 + line_rev + line2 + line_lost
-    labels = [l.get_label() for l in lines]
-    ax1.legend(lines, labels, loc='upper left')
+    lines1 = line_rev + line_prof
+    labels1 = [l.get_label() for l in lines1]
+    ax1.legend(lines1, labels1, loc='upper left')
     
-    plt.title('Залежність фінансових показників від розміру штату')
-    plt.xticks(summary_df['masters'])
-    plt.grid(True, alpha=0.3)
+    ax1.set_title('Доходи та Прибуток')
+    ax1.set_xticks(summary_df['masters'])
+    ax1.grid(True, alpha=0.3)
+
+    color_wages = 'tab:red'
+    color_lost = 'orange'
+    
+    ax2.set_xlabel('Кількість майстрів (c)')
+    ax2.set_ylabel('Сума (грн)')
+    
+    line_wages = ax2.plot(summary_df['masters'], summary_df['wages'], color=color_wages, marker='x', linestyle='--', linewidth=2, label='Витрати на зарплату')
+    line_lost = ax2.plot(summary_df['masters'], summary_df['lostProfit'], color=color_lost, marker='^', linestyle='-.', linewidth=2, label='Недоотриманий прибуток (U)')
+    
+    lines2 = line_wages + line_lost
+    labels2 = [l.get_label() for l in lines2]
+    ax2.legend(lines2, labels2, loc='upper left')
+    
+    ax2.set_title('Витрати та Збитки')
+    ax2.set_xticks(summary_df['masters'])
+    ax2.grid(True, alpha=0.3)
+
+    plt.suptitle('Залежність фінансових показників від розміру штату', fontsize=14, y=1.03)
     plt.tight_layout()
-    plt.savefig('financials_vs_c.png')
+    plt.savefig('financials_side_by_side_left_axis.png', bbox_inches='tight')
     plt.show()
 
 def plot_utilization(summary_df):
     plt.figure(figsize=(8, 5))
     plt.plot(summary_df['masters'], summary_df['utilization'], marker='D', color='purple', linewidth=2)
-    plt.axhline(y=0.75, color='orange', linestyle='--', label='Оптимальна завантаженість (75%)')
+    plt.axhline(y=0.85, color='orange', linestyle='--', label='Оптимальна завантаженість (85%)')
     
     plt.title('Завантаженість майстрів залежно від їх кількості')
     plt.xlabel('Кількість майстрів (c)')
