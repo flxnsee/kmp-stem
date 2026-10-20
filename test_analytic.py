@@ -1,7 +1,6 @@
 from analytic_model import analyticModel
 
 def test_lectureExample():
-    # приклад з лекції 8: автосервіс, 3 бригади, lambda = 7, t = 0,75 год, m = 4
     r = analyticModel(3, lam=7, mu=1 / 0.75, m=4)
 
     assert round(r["q0"], 6) == 0.001939
